@@ -1,0 +1,18 @@
+{
+  "name": "draft-desk",
+  "version": "0.1.0",
+  "description": "Turn a customer enquiry into a ready-to-send quote using an LLM, and track the job.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "init-db": "node src/init-db.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0"
+  }
+}

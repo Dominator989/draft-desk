@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DraftDesk</title>
+  <style>
+    :root { --line: #e3e3e0; --muted: #6b6b66; --accent: #2f6f4f; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 0 auto;
+           padding: 24px 16px; color: #1a1a18; background: #fafaf8; }
+    h1 { margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 24px; }
+    form { display: grid; gap: 8px; margin-bottom: 28px; }
+    input, textarea { padding: 9px; border: 1px solid var(--line); border-radius: 7px;
+                      font: inherit; width: 100%; }
+    button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px;
+             background: #fff; cursor: pointer; font: inherit; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+            margin-bottom: 12px; background: #fff; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .tag { font-size: 12px; padding: 2px 8px; border-radius: 20px; background: #eef2ef;
+           color: var(--accent); }
+    .details { color: var(--muted); margin: 6px 0; }
+    .draft { white-space: pre-wrap; background: #f5f5f2; border-radius: 7px;
+             padding: 10px; margin-top: 8px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>DraftDesk</h1>
+  <p class="sub">Log an enquiry, draft a reply, track the job.</p>
+
+  <form id="new-enquiry">
+    <input name="customer_name" placeholder="Customer name" required />
+    <input name="contact" placeholder="Phone or email (optional)" />
+    <textarea name="details" placeholder="What did they ask for?" rows="3" required></textarea>
+    <button class="primary" type="submit">Add enquiry</button>
+  </form>
+
+  <div id="list"></div>
+
+  <script>
+    const api = '/api/enquiries';
+    const statuses = ['New', 'Quoted', 'Won', 'Done'];
+
+    async function load() {
+      const rows = await (await fetch(api)).json();
+      document.getElementById('list').innerHTML = rows.map(card).join('') ||
+        '<p class="sub">No enquiries yet.</p>';
+    }
+
+    function card(e) {
+      return `<div class="card">
+        <div class="row">
+          <strong>${esc(e.customer_name)}</strong>
+          <span class="tag">${e.status}</span>
+        </div>
+        <div class="details">${esc(e.details)}${e.contact ? ' · ' + esc(e.contact) : ''}</div>
+        ${e.draft ? `<div class="draft">${esc(e.draft)}</div>` : ''}
+        <div class="actions">
+          <button onclick="draft(${e.id})">${e.draft ? 'Redraft' : 'Draft reply'}</button>
+          ${statuses.map(s => `<button onclick="setStatus(${e.id},'${s}')">${s}</button>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    }
+
+    document.getElementById('new-enquiry').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const body = Object.fromEntries(new FormData(ev.target));
+      await fetch(api, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body) });
+      ev.target.reset();
+      load();
+    });
+
+    async function draft(id) {
+      const res = await fetch(`${api}/${id}/draft`, { method: 'POST' });
+      if (!res.ok) alert('Draft failed — check your API key and model in .env');
+      load();
+    }
+
+    async function setStatus(id, status) {
+      await fetch(`${api}/${id}/status`, { method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>
